@@ -1,6 +1,8 @@
 import { DemoDashboard } from "@/components/demo-dashboard";
 import { readSupabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 export type Employee = { id: string; name: string; role: "manager" | "salesperson" | "expense_reporter"; };
 type Sale = { project: "A" | "B"; amount: number; status: string; approved_richard_percent: number | null; approved_anastasia_percent: number | null; approved_jean_claude_percent: number | null; };
 type Expense = { amount: number; status: string; final_allocation: string | null; };

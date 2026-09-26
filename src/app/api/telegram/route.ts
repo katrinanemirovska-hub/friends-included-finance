@@ -31,6 +31,14 @@ export async function POST(request: Request) {
     const response = await fetch(`${url}/rest/v1/sales`, { method: "POST", headers: headers(), body: JSON.stringify({ reference: reference.toUpperCase(), salesperson_id: employee.id, customer, project, description, amount: Number(amount), proposed_richard_percent: shares[0], proposed_anastasia_percent: shares[1], proposed_jean_claude_percent: shares[2] }) });
     await telegram(chatId, response.ok ? `${reference.toUpperCase()} recorded: €${Number(amount).toFixed(2)}, Project ${project}, Pending approval.` : "The sale was not saved. Check the reference is unique and try again."); return NextResponse.json({ ok: true });
   }
-  await telegram(chatId, `Commands: /sale REF;Customer;A or B;Description;Amount;Richard%;Anastasia%;Jean-Claude%. Your role is currently ${employee.role}.`);
+  if (text.startsWith("/expense ")) {
+    if (employee.role !== "expense_reporter") { await telegram(chatId, "Only Kevin can submit an expense."); return NextResponse.json({ ok: true }); }
+    const [reference, description, category, amount, allocation] = text.slice(9).split(";").map((value) => value.trim());
+    if (!reference || !description || !["Materials", "Travel", "Other"].includes(category) || Number(amount) <= 0 || !["A", "B", "Company overhead"].includes(allocation)) { await telegram(chatId, "Use: /expense REF;Description;Materials, Travel or Other;Amount;A, B or Company overhead."); return NextResponse.json({ ok: true }); }
+    const overhead = allocation === "Company overhead";
+    const response = await fetch(`${url}/rest/v1/expenses`, { method: "POST", headers: headers(), body: JSON.stringify({ reference: reference.toUpperCase(), reporter_id: employee.id, description, category, amount: Number(amount), proposed_allocation: allocation, final_allocation: overhead ? allocation : null, status: overhead ? "allocated" : "awaiting_allocation" }) });
+    await telegram(chatId, response.ok ? `${reference.toUpperCase()} recorded: €${Number(amount).toFixed(2)}, proposed allocation ${allocation}, ${overhead ? "allocated automatically" : "Awaiting allocation"}.` : "The expense was not saved. Check the reference is unique and try again."); return NextResponse.json({ ok: true });
+  }
+  await telegram(chatId, `Commands: /sale REF;Customer;A or B;Description;Amount;Richard%;Anastasia%;Jean-Claude% or /expense REF;Description;Materials, Travel or Other;Amount;A, B or Company overhead. Your role is currently ${employee.role}.`);
   return NextResponse.json({ ok: true });
 }

@@ -5,7 +5,7 @@ import type { Employee } from "@/app/page";
 
 const roleLabel = { manager: "Manager", salesperson: "Salesperson", expense_reporter: "Expense reporter" };
 
-export function DemoDashboard({ staff }: { staff: Employee[] }) {
+export function DemoDashboard({ staff, stats }: { staff: Employee[]; stats: { projectA: number; projectB: number; company: number } }) {
   const [selectedId, setSelectedId] = useState(staff[0]?.id ?? "");
   const selected = staff.find((employee) => employee.id === selectedId);
   const isManager = selected?.role === "manager";
@@ -15,12 +15,13 @@ export function DemoDashboard({ staff }: { staff: Employee[] }) {
     <header className="topbar"><div><p className="eyebrow">Friends Included Ltd</p><h1>Finance system</h1></div><div className="connection"><span className="status-dot" /> Supabase connected</div></header>
     <section className="role-panel"><div><p className="section-label">Demonstration access</p><h2>Who are you today?</h2><p>Choose a fictional employee to test what they can see and do.</p></div><label className="role-select"><span>Demonstration role</span><select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>{staff.map((employee) => <option key={employee.id} value={employee.id}>{employee.name} — {roleLabel[employee.role]}</option>)}</select></label></section>
     {selected ? <section className="welcome"><div><p className="section-label">Signed in for demonstration</p><h2>{selected.name}</h2><p>{roleLabel[selected.role]}</p></div><div className="permission-summary">{isManager && "You can review and approve records."}{canSubmitSale && "You can report sales and proposed commission splits."}{canSubmitExpense && "You can report expenses and proposed allocations."}</div></section> : <p className="empty-state">Employee data is loading. Refresh the page if it does not appear.</p>}
-    <section className="metrics"><Metric label="Project A result" value="€0.00" detail="No approved records yet" /><Metric label="Project B result" value="€0.00" detail="No approved records yet" /><Metric label="Company result" value="€0.00" detail="No transactions recorded" featured /></section>
+    <section className="metrics"><Metric label="Project A result" value={formatMoney(stats.projectA)} detail="Approved sales, commissions and expenses" /><Metric label="Project B result" value={formatMoney(stats.projectB)} detail="Approved sales, commissions and expenses" /><Metric label="Company result" value={formatMoney(stats.company)} detail="All recorded expenses included" featured /></section>
     {canSubmitSale && selected ? <SaleForm employeeId={selected.id} /> : canSubmitExpense && selected ? <ExpenseForm employeeId={selected.id} /> : isManager && selected ? <ManagerSetup managerId={selected.id} staff={staff} /> : <section className="workspace"><div className="workspace-card"><p className="section-label">Next action</p><h2>Choose a role</h2></div></section>}
   </main>;
 }
 
 function Metric({ label, value, detail, featured = false }: { label: string; value: string; detail: string; featured?: boolean }) { return <article className={`metric ${featured ? "metric-featured" : ""}`}><p>{label}</p><strong>{value}</strong><span>{detail}</span></article>; }
+function formatMoney(value: number) { return new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(value); }
 
 function SaleForm({ employeeId }: { employeeId: string }) {
   const [message, setMessage] = useState(""); const [saving, setSaving] = useState(false);

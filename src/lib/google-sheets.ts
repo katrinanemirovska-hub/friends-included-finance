@@ -33,11 +33,13 @@ async function accessToken() {
   return (await response.json() as { access_token: string }).access_token;
 }
 
-const salesHeaders = ["reference", "salesperson_id", "customer", "project", "description", "amount", "proposed_richard_percent", "proposed_anastasia_percent", "proposed_jean_claude_percent", "status", "approved_richard_percent", "approved_anastasia_percent", "approved_jean_claude_percent", "submitted_at", "approved_at"];
+const salesHeaders = ["reference", "submission_time", "salesperson_id", "customer", "project", "description", "amount", "proposed_richard_percent", "proposed_anastasia_percent", "proposed_jean_claude_percent", "approved_richard_percent", "approved_anastasia_percent", "approved_jean_claude_percent", "richard_commission_eur", "anastasia_commission_eur", "jean_claude_commission_eur", "status", "approved_at", "sync_status", "notification_status"];
 const expenseHeaders = ["reference", "reporter_id", "description", "category", "amount", "proposed_allocation", "final_allocation", "status", "submitted_at", "allocated_at"];
 
 function valuesFor(row: RecordValue, headers: string[]) {
-  return headers.map((header) => row[header] == null ? "" : String(row[header]));
+  const pool = row.status === "approved" ? Number(row.amount) * .1 : 0;
+  const derived: Record<string, unknown> = { submission_time: row.submitted_at, richard_commission_eur: pool * Number(row.approved_richard_percent ?? 0) / 100, anastasia_commission_eur: pool * Number(row.approved_anastasia_percent ?? 0) / 100, jean_claude_commission_eur: pool * Number(row.approved_jean_claude_percent ?? 0) / 100 };
+  return headers.map((header) => (derived[header] ?? row[header]) == null ? "" : String(derived[header] ?? row[header]));
 }
 
 /** Upserts a single business record by its reference. It never deletes Sheets rows. */
@@ -48,7 +50,7 @@ export async function syncGoogleSheet(kind: SheetKind, row: RecordValue) {
   const headers = kind === "Sales" ? salesHeaders : expenseHeaders;
   const auth = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
   const base = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values`;
-  const encodedSheet = encodeURIComponent(`${kind}!A:O`);
+  const encodedSheet = encodeURIComponent(`${kind}!A:Z`);
   const current = await fetch(`${base}/${encodedSheet}`, { headers: auth });
   if (!current.ok) throw new Error(`Google Sheets could not be read (${current.status}).`);
   const rows = (await current.json() as { values?: string[][] }).values ?? [];
@@ -58,6 +60,9 @@ export async function syncGoogleSheet(kind: SheetKind, row: RecordValue) {
     const initialise = await fetch(`${base}/${encodeURIComponent(`${kind}!A1`)}?valueInputOption=RAW`, { method: "PUT", headers: auth, body: JSON.stringify({ values: [expectedHeader] }) });
     if (!initialise.ok) throw new Error(`Google Sheets headers could not be created (${initialise.status}).`);
     table = [expectedHeader];
+  } else if (table[0]?.join("|") !== expectedHeader.join("|")) {
+    const updateHeader = await fetch(`${base}/${encodeURIComponent(`${kind}!A1`)}?valueInputOption=RAW`, { method: "PUT", headers: auth, body: JSON.stringify({ values: [expectedHeader] }) });
+    if (!updateHeader.ok) throw new Error(`Google Sheets headers could not be updated (${updateHeader.status}).`);
   }
   const rowNumber = table.findIndex((item, index) => index > 0 && item[0] === String(row.reference));
   const values = [valuesFor(row, headers)];
@@ -65,7 +70,7 @@ export async function syncGoogleSheet(kind: SheetKind, row: RecordValue) {
     const update = await fetch(`${base}/${encodeURIComponent(`${kind}!A${rowNumber + 1}`)}?valueInputOption=RAW`, { method: "PUT", headers: auth, body: JSON.stringify({ values }) });
     if (!update.ok) throw new Error(`Google Sheets row could not be updated (${update.status}).`);
   } else {
-    const append = await fetch(`${base}/${encodeURIComponent(`${kind}!A:O`)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, { method: "POST", headers: auth, body: JSON.stringify({ values }) });
+    const append = await fetch(`${base}/${encodeURIComponent(`${kind}!A:Z`)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, { method: "POST", headers: auth, body: JSON.stringify({ values }) });
     if (!append.ok) throw new Error(`Google Sheets row could not be added (${append.status}).`);
   }
   return true;

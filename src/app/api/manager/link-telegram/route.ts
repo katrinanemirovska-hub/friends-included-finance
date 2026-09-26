@@ -11,6 +11,7 @@ export async function POST(request: Request) {
   const managerResponse = await fetch(`${url}/rest/v1/employees?id=eq.${body.managerId}&select=role`, { headers });
   const managers = await managerResponse.json() as Array<{ role: string }>;
   if (managers[0]?.role !== "manager") return NextResponse.json({ error: "Only Svetlana can link Telegram accounts." }, { status: 403 });
+  await fetch(`${url}/rest/v1/employees?telegram_user_id=eq.${body.telegramUserId}`, { method: "PATCH", headers, body: JSON.stringify({ telegram_user_id: null }) });
   const response = await fetch(`${url}/rest/v1/employees?id=eq.${body.employeeId}`, { method: "PATCH", headers, body: JSON.stringify({ telegram_user_id: Number(body.telegramUserId) }) });
   if (!response.ok) return NextResponse.json({ error: "Could not save this link. This Telegram ID may already be assigned." }, { status: 400 });
   return NextResponse.json({ message: "Telegram user ID linked successfully." });

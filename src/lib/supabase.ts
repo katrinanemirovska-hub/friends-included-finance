@@ -6,6 +6,10 @@ if (!supabaseUrl || !supabasePublishableKey) {
 }
 
 export async function readSupabase<T>(table: string): Promise<T[]> {
+  if (!supabaseUrl || !supabasePublishableKey) {
+    throw new Error("Supabase connection settings are missing.");
+  }
+
   const response = await fetch(`${supabaseUrl}/rest/v1/${table}?select=*`, {
     headers: {
       apikey: supabasePublishableKey,

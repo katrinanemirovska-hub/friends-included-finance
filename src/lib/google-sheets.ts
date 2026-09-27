@@ -33,12 +33,12 @@ async function accessToken() {
   return (await response.json() as { access_token: string }).access_token;
 }
 
-const salesHeaders = ["reference", "submission_time", "salesperson_id", "customer", "project", "description", "amount", "proposed_richard_percent", "proposed_anastasia_percent", "proposed_jean_claude_percent", "approved_richard_percent", "approved_anastasia_percent", "approved_jean_claude_percent", "richard_commission_eur", "anastasia_commission_eur", "jean_claude_commission_eur", "status", "approved_at", "sync_status", "notification_status"];
-const expenseHeaders = ["reference", "reporter_id", "description", "category", "amount", "proposed_allocation", "final_allocation", "status", "submitted_at", "allocated_at"];
+const salesHeaders = ["reference", "submission_time", "salesperson", "customer", "project", "description", "amount", "proposed_richard_percent", "proposed_anastasia_percent", "proposed_jean_claude_percent", "approved_richard_percent", "approved_anastasia_percent", "approved_jean_claude_percent", "richard_commission_eur", "anastasia_commission_eur", "jean_claude_commission_eur", "status", "approved_at", "sync_status", "notification_status"];
+const expenseHeaders = ["reference", "submission_time", "reporter", "description", "category", "amount", "proposed_allocation", "final_allocation", "status", "allocated_at", "sync_status", "notification_status"];
 
 function valuesFor(row: RecordValue, headers: string[]) {
   const pool = row.status === "approved" ? Number(row.amount) * .1 : 0;
-  const derived: Record<string, unknown> = { submission_time: row.submitted_at, richard_commission_eur: pool * Number(row.approved_richard_percent ?? 0) / 100, anastasia_commission_eur: pool * Number(row.approved_anastasia_percent ?? 0) / 100, jean_claude_commission_eur: pool * Number(row.approved_jean_claude_percent ?? 0) / 100 };
+  const derived: Record<string, unknown> = { submission_time: row.submitted_at, salesperson: row.salesperson_name ?? row.salesperson_id, reporter: row.reporter_name ?? row.reporter_id, richard_commission_eur: pool * Number(row.approved_richard_percent ?? 0) / 100, anastasia_commission_eur: pool * Number(row.approved_anastasia_percent ?? 0) / 100, jean_claude_commission_eur: pool * Number(row.approved_jean_claude_percent ?? 0) / 100 };
   return headers.map((header) => (derived[header] ?? row[header]) == null ? "" : String(derived[header] ?? row[header]));
 }
 
